@@ -1,44 +1,32 @@
 use crate::card::{Card, Color, Deck};
 use crate::player::{Player, Team};
 
-pub struct Game<'a> {
-    pub players: Vec<Player>,
-    pub deck: Deck,
+pub struct Round<'a> {
+    pub current: i8,
     pub trump_color: Option<Color>,
-    pub taker: Option<&'a Player>,
-    pub current_round: i8,
     pub current_player: Option<&'a Player>,
-    pub maximum_points: i32,
+    pub taker: Option<&'a Player>,
+    pub trick: Vec<&Card>,
+    pub players: Vec<&Player>,
+    pub deck: Deck
 }
 
-const FIRST_DRAW: i8 = 3;
-const SECOND_DRAW: i8 = 2;
+impl Round {
 
-impl Game<'a> {
-    pub fn new(players: Vec<Player>) -> Game<'a> {
-        Game {
-            players,
-            ..Default::default()
+    pub fn new(count: i8, players: Vec<&Player>, deck: Deck) -> Self {
+        return Round {
+            current: count,
+            trump_color: None,
+            current_player: None,
+            taker: None,
+            trick: Vec::new(),
+            players: players,
+            deck: deck
         }
-    }
-
-    fn set_teams(&mut self) -> (Team, Team) {
-        let red = Team::new(vec![self.players[0].clone(), self.players[2].clone()]);
-        let black = Team::new(vec![self.players[1].clone(), self.players[3].clone()]);
-        (red, black)
     }
 
     pub fn start(&mut self) {
-        self.deck.shuffle();
-        let (red, black) = self.set_teams();
-
-        while (red.points < self.maximum_points) && (black.points < self.maximum_points) {
-            self.start_round();
-        }
-    }
-
-    fn start_round(&mut self) {
-        self.current_round += 1;
+        self.current += 1;
         self.draw_starting_hands();
         let potential_trump = &self.deck.draw();
         println!("Potential trump: {:?}", potential_trump);
@@ -67,9 +55,9 @@ impl Game<'a> {
     }
 
     fn draw_remaining_cards(&mut self) {
-        println!("{} took the trump", self.taker.name);
+        println!("{} took the trump", &self.taker);
         for player in &mut self.players {
-            if player.name == self.taker.name {
+            if player.name == &self.taker.unwrap().name {
                 player.draw_n(&mut self.deck, 2);
             } else {
                 player.draw_n(&mut self.deck, 3);
@@ -98,28 +86,54 @@ impl Game<'a> {
             if does_want {
                 self.trump_color = Some(color.unwrap());
                 self.taker = Some(player);
-                player.hand.push(potential_trump.clone());
+                player.hand.push(potential_trump);
                 break;
             }
         }
         return self.taker.is_some();
     }
 
-    fn play_round(&mut self) {
-        // TODO: Implement
+    pub fn play_round() {
+        // TODO implement
     }
 }
 
-impl Default for Game<'_> {
-    fn default() -> Self {
+pub struct Game {
+    pub teams: (Team, Team),
+    pub deck: Deck,
+    pub rounds: Vec<Round>,
+    pub maximum_points: i8,
+}
+
+const FIRST_DRAW: i8 = 3;
+const SECOND_DRAW: i8 = 2;
+const MAXIMUM_POINTS: i8 = 1000;
+
+impl Game {
+    pub fn new(teams: (Team, Team)) -> Game {
         Game {
-            players: Vec::new(),
             deck: Deck::new(),
-            trump_color: None,
-            taker: None,
-            current_round: 0,
-            current_player: None,
-            maximum_points: 1000,
+            rounds: Vec::new(),
+            maximum_points: MAXIMUM_POINTS,
+            teams: teams
         }
     }
+
+    pub fn start(&mut self) {
+        self.deck.shuffle();
+        let mut counter = 0;
+        while (self.teams.0.points < self.maximum_points) && (self.teams.1.points < self.maximum_points) {
+            self.start_round(counter);
+            counter += 1;
+        }
+    }
+
+    fn start_round(&mut self, count: i8) {
+        let round = Round::new(count, self.get_players(), Deck::new());        
+    }
+
+    fn get_players(&mut self) -> Vec<&Player> {
+        vec![&self.teams.0.players[0], &self.teams.1.players[0], &self.teams.0.players[1], &self.teams.1.players[1]]
+    }
+
 }

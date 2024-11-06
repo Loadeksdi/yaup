@@ -2,7 +2,7 @@ use crate::card::{Card, Color, Deck};
 
 pub struct Team {
     pub players: Vec<Player>,
-    pub points: i32,
+    pub points: i8,
 }
 
 impl Default for Team {
